@@ -72,8 +72,7 @@ class ProductController extends Controller
                 'status' => 200,
                 'data' => [
                     'message' => 'Product Successfully Created',
-                    'product' => new ProductResource($product),
-                    'data' => basename($product->image)
+                    'product' => new ProductResource($product)
                 ]
             ], 200);
         }catch(\Exception $e){
@@ -147,7 +146,8 @@ class ProductController extends Controller
             return response()->json([
                 'status' => 200,
                 'data' => [
-                    'message' => 'Product Successfully Updated'
+                    'message' => 'Product Successfully Updated',
+                    'product' => new ProductResource($product)
                 ]
                 ], 200);
         }catch(\Exception $e){
