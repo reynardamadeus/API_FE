@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
 use App\Models\Product;
 use App\Http\Resources\ProductResource;
+use Illuminate\Support\Str;
 
 class ProductController extends Controller
 {
@@ -16,13 +17,14 @@ class ProductController extends Controller
 
             return response()->json([
                 'status' => 200,
-                'message' => $products,
+                'data' => $products
             ], 200);
 
         }catch(\Exception $e){
             return response()->json([
                 'status' => 500,
-                'message' => $e->getMessage()
+                'data' => [
+                    'message' => $e->getMessage()]
             ], 500);
         }
     }
@@ -55,7 +57,7 @@ class ProductController extends Controller
             }
 
 
-            $imageName = $request->image->getClientOriginalName();
+            $imageName = Str::uuid() . '.' .  $request->image->getClientOriginalExtension();
             $imagePath = $request->file('image')->storeAs('/', $imageName, 'public');
             $imagePath = '/storage/'. $imagePath;
 
@@ -78,7 +80,8 @@ class ProductController extends Controller
         }catch(\Exception $e){
             return response()->json([
                 'status' => 500,
-                'message' => $e->getMessage()
+                'data' => [
+                    'message' => $e->getMessage()]
             ], 500);
         }
     }
@@ -121,19 +124,14 @@ class ProductController extends Controller
                     ], 400);
             }
 
-            $filePath = basename($product->image);
-            if (Storage::exists($filePath)) {
-                Storage::delete($filePath);
-            } else {
-                return response()->json([
-                    'status' => 400,
-                    'data' => ['message' => 'Image not found']
-                ], 400);
-            }
+            $imagePath = str_replace('/storage/', '', $product->image);
+            Storage::disk('public')->delete($imagePath);
 
-            $imageName = $request->image->getClientOriginalName();
+
+            $imageName = Str::uuid() . '.' .  $request->image->getClientOriginalExtension();
             $imagePath = $request->file('image')->storeAs('/', $imageName, 'public');
             $imagePath = '/storage/'. $imagePath;
+            
             $product->update([
                 'name' => $request->name,
                 'description' => $request->description,
@@ -172,15 +170,8 @@ class ProductController extends Controller
                 ], 400);
             }
 
-            $filePath = basename($product->image);
-            if (Storage::exists($filePath)) {
-                Storage::delete($filePath);
-            } else {
-                return response()->json([
-                    'status' => 400,
-                    'data' => ['message' => 'Image not found']
-                ], 400);
-            }
+            $imagePath = str_replace('/storage/', '', $product->image);
+            Storage::disk('public')->delete($imagePath);
 
             $product->delete();
 
