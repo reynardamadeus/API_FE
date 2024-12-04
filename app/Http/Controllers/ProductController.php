@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Storage;
 use App\Models\Product;
 use App\Http\Resources\ProductResource;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 
 class ProductController extends Controller
 {
@@ -36,7 +37,7 @@ class ProductController extends Controller
                 'description' => 'required',
                 'stock' => 'required|integer',
                 'price' => 'required|integer',
-                'image' => 'required|image|max:2048',
+                'image' => 'required|string',
                 'production_date' => 'required',
             ]);
 
@@ -56,17 +57,28 @@ class ProductController extends Controller
                     ], 400);
             }
 
+            $imageData = $request->input('image');
 
-            $imageName = Str::uuid() . '.' .  $request->image->getClientOriginalExtension();
-            $imagePath = $request->file('image')->storeAs('/', $imageName, 'public');
-            $imagePath = '/storage/'. $imagePath;
+            if (preg_match('/^data:image\/(\w+);base64,/', $imageData, $matches)) {
+                $imageType = $matches[1];
+            }
+
+
+            list($type, $data) = explode(';', $imageData);
+            list(, $data) = explode(',', $data);
+            $decodedImage = base64_decode($data);
+
+            $imageName = Str::uuid() . '.' .  $imageType;
+
+            $filePath = "uploads/{$imageName}";
+            Storage::disk('public')->put($filePath, $decodedImage);
 
             $product = Product::create([
                 'name' => $request->name,
                 'description' => $request->description,
                 'stock' => $request->stock,
                 'price' => $request->price,
-                'image' => $imagePath,
+                'image' => Storage::url($filePath),
                 'production_date' => $request->production_date,
             ]);
 
@@ -99,45 +111,30 @@ class ProductController extends Controller
                 ], 400);
             }
 
-            $validation = Validator::make( $request->all(), [
-            'name' => 'required',
-            'description' => 'required',
-            'stock' => 'required|integer',
-            'price' => 'required|integer',
-            'image' => 'required|image|max:2048',
-            'production_date' => 'required',
-            ]);
-
-            if($validation->fails()){
-                $errors = array();
-
-                foreach($validation->errors()->getMessages() as $key => $values)
-                {
-                    array_push($errors, $values[0]);
-                }
-
-                return response()->json([
-                    'status' => 400,
-                    'data' => [
-                        'message' => $errors
-                    ]
-                    ], 400);
-            }
-
             $imagePath = str_replace('/storage/', '', $product->image);
             Storage::disk('public')->delete($imagePath);
 
+           $imageData = $request->input('image');
 
-            $imageName = Str::uuid() . '.' .  $request->image->getClientOriginalExtension();
-            $imagePath = $request->file('image')->storeAs('/', $imageName, 'public');
-            $imagePath = '/storage/'. $imagePath;
-            
+            if (preg_match('/^data:image\/(\w+);base64,/', $imageData, $matches)) {
+                $imageType = $matches[1];
+            }
+
+            list($type, $data) = explode(';', $imageData);
+            list(, $data) = explode(',', $data);
+            $decodedImage = base64_decode($data);
+
+            $imageName = Str::uuid() . '.' .  $imageType;
+
+            $filePath = "uploads/{$imageName}";
+            Storage::disk('public')->put($filePath, $decodedImage);
+
             $product->update([
                 'name' => $request->name,
                 'description' => $request->description,
                 'stock' => $request->stock,
                 'price' => $request->price,
-                'image' => $imagePath,
+                'image' => Storage::url($filePath),
                 'production_date' => $request->production_date,
             ]);
 
